@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { Box, Button, TextField, Typography, Paper, Alert } from '@mui/material';
 import axios from 'axios';
 
+// Add the LoginResponse interface
+interface LoginResponse {
+  token: string;
+  // add other properties if your API returns more
+}
+
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,7 +21,8 @@ const LoginPage: React.FC = () => {
     setError('');
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/api/auth/login`, { email, password });
+      // Use LoginResponse as the generic type for axios.post
+      const res = await axios.post<LoginResponse>(`${API_URL}/api/auth/login`, { email, password });
       localStorage.setItem('token', res.data.token);
       // Optionally redirect or update app state here
       setLoading(false);
