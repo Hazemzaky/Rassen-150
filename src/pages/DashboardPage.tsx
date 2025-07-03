@@ -10,7 +10,7 @@ import ListItemText from '@mui/material/ListItemText';
 import CircularProgress from '@mui/material/CircularProgress';
 import Alert from '@mui/material/Alert';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis } from 'recharts';
 import axios from 'axios';
 
 const COLORS = ['#1976d2', '#388e3c', '#fbc02d', '#d32f2f'];
@@ -193,4 +193,4 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-export default DashboardPage;     
+export default DashboardPage;  
