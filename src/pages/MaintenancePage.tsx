@@ -3,7 +3,6 @@ import axios from 'axios';
 import {
   Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField, Typography, IconButton, Paper, Snackbar, Alert, Card, CardContent, MenuItem
 } from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
@@ -160,7 +159,7 @@ const MaintenancePage: React.FC = () => {
         </Box>
       ),
     },
-  ], [assets]);
+  ], []);
 
   const table = useReactTable({
     data: maintenance,
