@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
-  Box, Button, Card, CardContent, Typography, Paper, TextField, MenuItem, Snackbar, Alert, IconButton, Dialog, DialogTitle, DialogContent, DialogActions
+  Box, Button, Card, CardContent, Typography, Paper, TextField, MenuItem, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import PrintIcon from '@mui/icons-material/Print';
 
@@ -298,4 +298,4 @@ const AssetsPage: React.FC = () => {
   );
 };
 
-export default AssetsPage; 
+export default AssetsPage;  
