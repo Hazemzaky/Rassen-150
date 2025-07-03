@@ -153,7 +153,7 @@ const FuelLogsPage: React.FC = () => {
         </Box>
       ),
     },
-  ], []);
+  ], [projects, drivers]);
 
   const table = useReactTable({
     data: fuelLogs,
@@ -337,4 +337,4 @@ const FuelLogsPage: React.FC = () => {
   );
 };
 
-export default FuelLogsPage; 
+export default FuelLogsPage;
