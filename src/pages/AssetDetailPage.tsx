@@ -6,6 +6,8 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, Line
 
 const tabLabels = ['Lifecycle', 'Maintenance', 'Depreciation', 'Downtime'];
 
+const COLORS = ['#1976d2', '#388e3c', '#fbc02d', '#d32f2f', '#6d4c41', '#0288d1'];
+
 const AssetDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [tab, setTab] = useState(0);
