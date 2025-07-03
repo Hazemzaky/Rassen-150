@@ -8,7 +8,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import SaveAltIcon from '@mui/icons-material/SaveAlt';
 import PrintIcon from '@mui/icons-material/Print';
-import { ResponsiveContainer, Legend, PieChart, Pie, Cell, LineChart, Line, Tooltip, XAxis, YAxis } from 'recharts';
+import { VictoryPie, VictoryChart, VictoryLine, VictoryAxis, VictoryTooltip, VictoryLegend } from 'victory';
 import { useReactTable, getCoreRowModel, flexRender, ColumnDef } from '@tanstack/react-table';
 
 interface Depreciation {
@@ -246,27 +246,48 @@ const DepreciationPage: React.FC = () => {
       <Box display="flex" gap={4} mb={3} flexWrap="wrap">
         <Paper sx={{ p: 2, minWidth: 320, flex: 1 }}>
           <Typography variant="subtitle1">Depreciation by Asset</Typography>
-          <ResponsiveContainer width="100%" height={180}>
-            <PieChart>
-              <Pie data={deprByAsset} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} label>
-                {deprByAsset.map((entry, idx) => <Cell key={entry.name} fill={COLORS[idx % COLORS.length]} />)}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+          <VictoryPie
+            data={deprByAsset}
+            x="name"
+            y="value"
+            colorScale="qualitative"
+            labelComponent={<VictoryTooltip />}
+            style={{ labels: { fontSize: 10 } }}
+            width={320}
+            height={180}
+          />
+          <VictoryLegend
+            x={50}
+            y={160}
+            orientation="horizontal"
+            gutter={20}
+            data={deprByAsset.map((entry, idx) => ({
+              name: entry.name,
+              symbol: { fill: "#1976d2" }
+            }))}
+            style={{ labels: { fontSize: 10 } }}
+          />
         </Paper>
         <Paper sx={{ p: 2, minWidth: 320, flex: 1 }}>
           <Typography variant="subtitle1">Depreciation Over Time</Typography>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={deprOverTime} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-              <XAxis dataKey="year" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="value" stroke="#1976d2" name="Depreciation" />
-            </LineChart>
-          </ResponsiveContainer>
+          <VictoryChart width={320} height={180}>
+            <VictoryAxis
+              dependentAxis
+              style={{ tickLabels: { fontSize: 10 } }}
+            />
+            <VictoryAxis
+              style={{ tickLabels: { fontSize: 10 } }}
+              tickFormat={t => t}
+            />
+            <VictoryLine
+              data={deprOverTime}
+              x="year"
+              y="value"
+              style={{ data: { stroke: "#1976d2" } }}
+              labels={({ datum }) => datum.value}
+              labelComponent={<VictoryTooltip />}
+            />
+          </VictoryChart>
         </Paper>
       </Box>
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
