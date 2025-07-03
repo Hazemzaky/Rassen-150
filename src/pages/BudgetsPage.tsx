@@ -83,8 +83,8 @@ const BudgetsPage: React.FC = () => {
     }
     if (sortKey) {
       data = [...data].sort((a, b) => {
-        let aVal: any = a[sortKey as keyof Budget];
-        let bVal: any = b[sortKey as keyof Budget];
+        let aVal = a[sortKey as keyof Budget] ?? '';
+        let bVal = b[sortKey as keyof Budget] ?? '';
         if (typeof aVal === 'string') aVal = aVal.toLowerCase();
         if (typeof bVal === 'string') bVal = bVal.toLowerCase();
         if (aVal < bVal) return -1;
