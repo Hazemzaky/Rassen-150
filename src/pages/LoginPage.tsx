@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Button, TextField, Typography, Paper, Alert } from '@mui/material';
+import axios from 'axios';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -7,29 +8,21 @@ const LoginPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const API_URL = process.env.REACT_APP_API_URL;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-     console.log('Login handler called', email, password);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await response.json();
+      const res = await axios.post(`${API_URL}/api/auth/login`, { email, password });
+      localStorage.setItem('token', res.data.token);
+      // Optionally redirect or update app state here
       setLoading(false);
-      if (response.ok) {
-        // Save token, redirect, etc.
-        localStorage.setItem('token', data.token);
-        window.location.href = '/dashboard';
-      } else {
-        setError(data.message || 'Login failed');
-      }
-    } catch (err) {
+      window.location.href = '/dashboard';
+    } catch (err: any) {
       setLoading(false);
-      setError('Network error');
+      setError(err.response?.data?.message || 'Login failed');
     }
   };
 
@@ -73,4 +66,4 @@ const LoginPage: React.FC = () => {
   );
 };
 
-export default LoginPage;
+export default LoginPage; 
