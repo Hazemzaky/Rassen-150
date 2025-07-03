@@ -8,7 +8,7 @@ import AddIcon from '@mui/icons-material/Add';
 import axios from 'axios';
 
 interface EntryLine {
-  account: string | { _id: string; [key: string]: any };
+  account: string | { _id: string; name?: string; code?: string; };
   debit: number;
   credit: number;
   description?: string;
