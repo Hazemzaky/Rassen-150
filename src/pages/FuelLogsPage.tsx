@@ -153,7 +153,7 @@ const FuelLogsPage: React.FC = () => {
         </Box>
       ),
     },
-  ], [projects, drivers]);
+  ], []);
 
   const table = useReactTable({
     data: fuelLogs,
