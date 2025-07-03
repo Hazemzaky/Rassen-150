@@ -84,8 +84,8 @@ const InvoicesPage: React.FC = () => {
     }
     if (sortKey) {
       data = [...data].sort((a, b) => {
-        let aVal: any = a[sortKey];
-        let bVal: any = b[sortKey];
+        let aVal = a[sortKey as keyof Invoice];
+        let bVal = b[sortKey as keyof Invoice];
         if (sortKey === 'dueDate') {
           aVal = new Date(aVal).getTime();
           bVal = new Date(bVal).getTime();
