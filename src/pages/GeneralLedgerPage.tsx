@@ -37,7 +37,6 @@ const GeneralLedgerPage: React.FC = () => {
       const res = await axios.get<Account[]>('/api/accounts', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      // Explicitly type the response as Account[]
       setAccounts(res.data as Account[]);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch accounts');
@@ -50,13 +49,12 @@ const GeneralLedgerPage: React.FC = () => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const params: any = { accountId: selectedAccount };
+      const params: Record<string, unknown> = { accountId: selectedAccount };
       if (period) params.period = period;
       const res = await axios.get<LedgerEntry[]>('/api/accounts/general-ledger', {
         headers: { Authorization: `Bearer ${token}` },
         params,
       });
-      // Explicitly type the response as LedgerEntry[]
       setLedger(res.data as LedgerEntry[]);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch ledger');
