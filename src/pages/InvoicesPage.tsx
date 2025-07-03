@@ -31,6 +31,8 @@ const statusColors: Record<string, 'default' | 'primary' | 'success' | 'warning'
   overdue: 'error',
 };
 
+const ensureArray = (data: any) => Array.isArray(data) ? data : [];
+
 const InvoicesPage: React.FC = () => {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,7 +63,7 @@ const InvoicesPage: React.FC = () => {
       const res = await axios.get<Invoice[]>('/api/invoices', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setInvoices(res.data);
+      setInvoices(ensureArray(res.data));
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to fetch invoices');
     } finally {
@@ -71,13 +73,13 @@ const InvoicesPage: React.FC = () => {
 
   // Sorting and filtering
   const filteredInvoices = useMemo(() => {
-    let data = invoices;
+    let data = ensureArray(invoices);
     if (search.trim()) {
       const s = search.trim().toLowerCase();
       data = data.filter(inv =>
-        (inv.recipient?.name?.toLowerCase().includes(s) || '') ||
-        (inv.recipient?.email?.toLowerCase().includes(s) || '') ||
-        inv.status.toLowerCase().includes(s)
+        inv.recipient?.name?.toLowerCase().includes(s) ||
+        inv.recipient?.email?.toLowerCase().includes(s) ||
+        inv.status?.toLowerCase().includes(s)
       );
     }
     if (sortKey) {
@@ -251,7 +253,7 @@ const InvoicesPage: React.FC = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredInvoices.map((inv, idx) => (
+                {(Array.isArray(filteredInvoices) ? filteredInvoices : []).map((inv, idx) => (
                   <TableRow key={inv._id} sx={{ background: idx % 2 === 0 ? '#fafafa' : '#fff' }}>
                     <TableCell>{inv._id.slice(-6).toUpperCase()}</TableCell>
                     <TableCell>
