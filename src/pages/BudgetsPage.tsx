@@ -31,6 +31,7 @@ const BudgetsPage: React.FC = () => {
   const [success, setSuccess] = useState('');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     department: '',
@@ -80,13 +81,13 @@ const BudgetsPage: React.FC = () => {
         let bVal: any = b[sortKey as keyof Budget];
         if (typeof aVal === 'string') aVal = aVal.toLowerCase();
         if (typeof bVal === 'string') bVal = bVal.toLowerCase();
-        if (aVal < bVal) return -1;
-        if (aVal > bVal) return 1;
+        if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
         return 0;
       });
     }
     return data;
-  }, [budgets, search, sortKey]);
+  }, [budgets, search, sortKey, sortOrder]);
 
   // Color for variance
   const getVarianceColor = (variance: number) => {
