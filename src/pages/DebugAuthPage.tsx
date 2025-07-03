@@ -1,145 +1,72 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Box, Typography, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, Card, CardContent, Snackbar, Alert, TextField, MenuItem, Button
-} from '@mui/material';
-import axios from 'axios';
+import React, { useState } from 'react';
+import { Box, Typography, Button, TextField, Paper, Alert } from '@mui/material';
 
-interface LedgerEntry {
-  date: string;
-  description: string;
-  debit: number;
-  credit: number;
-  balance: number;
-  entryId: string;
-  reference?: string;
-}
-interface Account {
-  _id: string;
-  name: string;
-  code: string;
+function decodeJWT(token: string): unknown {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (e) {
+    return null;
+  }
 }
 
-const GeneralLedgerPage: React.FC = () => {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [selectedAccount, setSelectedAccount] = useState('');
-  const [period, setPeriod] = useState('');
-  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+const DebugAuthPage: React.FC = () => {
+  const [token, setToken] = useState(localStorage.getItem('token') || '');
+  const [inputToken, setInputToken] = useState('');
+  const decoded = decodeJWT(token);
+  const isAuthenticated = !!token && !!decoded;
 
-  useEffect(() => {
-    fetchAccounts();
-  }, []);
-
-  const fetchAccounts = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get<Account[]>('/api/accounts', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setAccounts(res.data as Account[]);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch accounts');
-    }
+  const handleClear = () => {
+    localStorage.removeItem('token');
+    setToken('');
+    window.location.reload();
   };
-
-  const fetchLedger = async () => {
-    if (!selectedAccount) return;
-    setLoading(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-      const params: Record<string, unknown> = { accountId: selectedAccount };
-      if (period) params.period = period;
-      const res = await axios.get<LedgerEntry[]>('/api/accounts/general-ledger', {
-        headers: { Authorization: `Bearer ${token}` },
-        params,
-      });
-      setLedger(res.data as LedgerEntry[]);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch ledger');
-    } finally {
-      setLoading(false);
-    }
+  const handleSet = () => {
+    localStorage.setItem('token', inputToken);
+    setToken(inputToken);
+    window.location.reload();
   };
 
   return (
-    <Box p={3}>
-      <Typography variant="h4" mb={3}>General Ledger</Typography>
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Box display="flex" gap={2} alignItems="center">
-            <TextField
-              select
-              label="Account"
-              value={selectedAccount}
-              onChange={e => setSelectedAccount(e.target.value)}
-              sx={{ minWidth: 250 }}
-            >
-              <MenuItem value="">Select Account</MenuItem>
-              {accounts.map(a => (
-                <MenuItem key={a._id} value={a._id}>{a.name} ({a.code})</MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Period"
-              value={period}
-              onChange={e => setPeriod(e.target.value)}
-              placeholder="e.g. 2024-Q2 or 2024-05"
-              sx={{ minWidth: 180 }}
-            />
-            <Button variant="contained" color="primary" onClick={fetchLedger} disabled={!selectedAccount}>
-              Load Ledger
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-      <Paper sx={{ p: 2, overflowX: 'auto' }}>
-        {loading ? (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
-            <CircularProgress />
-          </Box>
-        ) : ledger.length > 0 ? (
-          <TableContainer>
-            <Table stickyHeader>
-              <TableHead>
-                <TableRow sx={{ background: '#f5f5f5' }}>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Description</TableCell>
-                  <TableCell>Debit</TableCell>
-                  <TableCell>Credit</TableCell>
-                  <TableCell>Balance</TableCell>
-                  <TableCell>Reference</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {ledger.map((l, idx) => (
-                  <TableRow key={l.entryId + idx} sx={{ background: idx % 2 === 0 ? '#fafafa' : '#fff' }}>
-                    <TableCell>{new Date(l.date).toLocaleDateString()}</TableCell>
-                    <TableCell>{l.description}</TableCell>
-                    <TableCell>{l.debit}</TableCell>
-                    <TableCell>{l.credit}</TableCell>
-                    <TableCell>{l.balance}</TableCell>
-                    <TableCell>{l.reference || '-'}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Typography variant="body1" color="text.secondary" align="center">No data to display</Typography>
-        )}
-        {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+    <Box p={3} display="flex" flexDirection="column" alignItems="center" minHeight="60vh">
+      <Paper sx={{ p: 3, maxWidth: 600, width: '100%' }}>
+        <Typography variant="h5" gutterBottom>Debug Auth Page</Typography>
+        <Alert severity={isAuthenticated ? 'success' : 'error'} sx={{ mb: 2 }}>
+          {isAuthenticated ? 'Authenticated' : 'Not Authenticated'}
+        </Alert>
+        <Typography variant="subtitle1">Current Token:</Typography>
+        <Paper sx={{ p: 1, mb: 2, bgcolor: '#f5f5f5', wordBreak: 'break-all' }}>{token || 'No token found'}</Paper>
+        <Typography variant="subtitle1">Decoded User:</Typography>
+        <Paper sx={{ p: 1, mb: 2, bgcolor: '#f5f5f5', wordBreak: 'break-all' }}>
+          <pre style={{ margin: 0 }}>{JSON.stringify(decoded, null, 2)}</pre>
+        </Paper>
+        <Box display="flex" gap={2} mb={2}>
+          <Button variant="contained" color="error" onClick={handleClear}>Clear Token (Logout)</Button>
+        </Box>
+        <Typography variant="subtitle1">Set Test Token:</Typography>
+        <Box display="flex" gap={2} alignItems="center" mb={2}>
+          <TextField
+            label="Token"
+            value={inputToken}
+            onChange={e => setInputToken(e.target.value)}
+            fullWidth
+            size="small"
+          />
+          <Button variant="contained" onClick={handleSet}>Set</Button>
+        </Box>
+        <Alert severity="info">
+          Use this page to debug authentication issues. You can clear or set a token, and see the decoded user info. If you are not authenticated, you will be redirected from protected pages.
+        </Alert>
       </Paper>
-      <Snackbar
-        open={!!error}
-        autoHideDuration={3000}
-        onClose={() => setError('')}
-        message={error}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      />
     </Box>
   );
 };
 
-export default GeneralLedgerPage;
+export default DebugAuthPage; 
