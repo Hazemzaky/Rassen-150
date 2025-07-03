@@ -16,7 +16,7 @@ interface UserProfile {
 }
 
 // Add a custom JWT decoder function
-function decodeJWT(token: string): any {
+function decodeJWT(token: string): unknown {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -54,7 +54,7 @@ const ProfilePage: React.FC = () => {
   const [showDebug, setShowDebug] = useState(true);
 
   // Get current user info from token
-  let currentUser: any = null;
+  let currentUser: Record<string, any> | null = null;
   try {
     if (token) {
       currentUser = decodeJWT(token);
