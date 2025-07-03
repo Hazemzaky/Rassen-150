@@ -1,145 +1,92 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
-  Box, Typography, Paper, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Alert, Card, CardContent, Snackbar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, InputAdornment, IconButton
+  Box, Typography, Paper, Button, Card, CardContent, Snackbar, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, CircularProgress, TextField, InputAdornment, IconButton, Chip, Alert
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloseIcon from '@mui/icons-material/Close';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import axios from 'axios';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 
-interface Income {
+interface Invoice {
   _id: string;
-  description: string;
-  amount: number;
-  date: string;
-  currency?: string;
-  managementDepartment?: string;
+  recipient: { name: string; email: string };
+  dueDate: string;
+  status: 'draft' | 'sent' | 'paid' | 'overdue';
+  totalAmount: number;
+  lineItems: Array<{ description: string; quantity: number; unitPrice: number; total: number }>;
+  uploadedBy?: any;
+  fileUrl?: string;
 }
 
-interface Period {
-  _id: string;
-  period: string;
-  closed: boolean;
-}
-
-type SortKey = 'amount' | 'date' | '';
+type SortKey = 'dueDate' | 'totalAmount' | 'status' | '';
 type SortOrder = 'asc' | 'desc';
 
-const IncomePage: React.FC = () => {
-  const [income, setIncome] = useState<Income[]>([]);
+const statusColors: Record<string, 'default' | 'primary' | 'success' | 'warning' | 'error'> = {
+  draft: 'default',
+  sent: 'primary',
+  paid: 'success',
+  overdue: 'error',
+};
+
+const ensureArray = (data: any) => Array.isArray(data) ? data : [];
+
+const InvoicesPage: React.FC = () => {
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({
-    description: '',
-    amount: '',
-    date: '',
-    currency: 'KWD',
-    managementDepartment: '',
-  });
-  const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState('');
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('');
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
-  const [periods, setPeriods] = useState<Period[]>([]);
-  const [periodLocked, setPeriodLocked] = useState(false);
+  const [markingPaid, setMarkingPaid] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    recipientName: '',
+    recipientEmail: '',
+    dueDate: '',
+    lineItems: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    fetchIncome();
-    // Fetch periods
-    const fetchPeriods = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const res = await axios.get<Period[]>('/api/periods', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        setPeriods(res.data);
-      } catch {}
-    };
-    fetchPeriods();
+    fetchInvoices();
   }, []);
 
-  useEffect(() => {
-    // Check if form.date's period is locked
-    if (form.date) {
-      const period = new Date(form.date).toISOString().slice(0, 7);
-      const found = periods.find(p => p.period === period);
-      setPeriodLocked(!!(found && found.closed));
-    } else {
-      setPeriodLocked(false);
-    }
-  }, [form.date, periods]);
-
-  const fetchIncome = async () => {
+  const fetchInvoices = async () => {
     setLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const res = await axios.get<Income[]>('/api/expenses/income', {
+      const res = await axios.get<Invoice[]>('/api/invoices', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setIncome(res.data);
+      setInvoices(ensureArray(res.data));
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch income records');
+      setError(err.response?.data?.message || 'Failed to fetch invoices');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleOpen = () => setOpen(true);
-  const handleClose = () => {
-    setOpen(false);
-    setForm({
-      description: '',
-      amount: '',
-      date: '',
-      currency: 'KWD',
-      managementDepartment: '',
-    });
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError('');
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post('/api/expenses/income', form, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setSuccess('Income record added successfully!');
-      fetchIncome();
-      handleClose();
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to add income');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  // Calculate total income
-  const totalIncome = income.reduce((sum, i) => sum + Number(i.amount), 0);
-
-  // Filtered and sorted income
-  const filteredIncome = useMemo(() => {
-    let data = income;
+  // Sorting and filtering
+  const filteredInvoices = useMemo(() => {
+    let data = ensureArray(invoices);
     if (search.trim()) {
       const s = search.trim().toLowerCase();
-      data = data.filter(i =>
-        i.description.toLowerCase().includes(s) ||
-        (i.managementDepartment || '').toLowerCase().includes(s)
+      data = data.filter(inv =>
+        inv.recipient?.name?.toLowerCase().includes(s) ||
+        inv.recipient?.email?.toLowerCase().includes(s) ||
+        inv.status?.toLowerCase().includes(s)
       );
     }
     if (sortKey) {
       data = [...data].sort((a, b) => {
-        let aVal: any = a[sortKey];
-        let bVal: any = b[sortKey];
-        if (sortKey === 'date') {
+        let aVal = a[sortKey as keyof Invoice];
+        let bVal = b[sortKey as keyof Invoice];
+        if (sortKey === 'dueDate') {
           aVal = new Date(aVal).getTime();
           bVal = new Date(bVal).getTime();
         }
@@ -149,22 +96,11 @@ const IncomePage: React.FC = () => {
       });
     }
     return data;
-  }, [income, search, sortKey, sortOrder]);
-
-  // Income trend chart data (by month)
-  const chartData = useMemo(() => {
-    const map = new Map<string, number>();
-    income.forEach(i => {
-      const d = new Date(i.date);
-      const key = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}`;
-      map.set(key, (map.get(key) || 0) + Number(i.amount));
-    });
-    return Array.from(map.entries()).map(([month, total]) => ({ month, total }));
-  }, [income]);
+  }, [invoices, search, sortKey, sortOrder]);
 
   // Currency formatter
-  const formatCurrency = (amount: number, currency = 'KWD') =>
-    amount.toLocaleString(undefined, { style: 'currency', currency });
+  const formatCurrency = (amount: number) =>
+    amount.toLocaleString(undefined, { style: 'currency', currency: 'KWD' });
 
   // Sorting handlers
   const handleSort = (key: SortKey) => {
@@ -176,60 +112,121 @@ const IncomePage: React.FC = () => {
     }
   };
 
+  // Mark as paid
+  const handleMarkPaid = async (id: string) => {
+    setMarkingPaid(id);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`/api/invoices/${id}/status`, { status: 'paid' }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuccess('Invoice marked as paid!');
+      fetchInvoices();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to update invoice');
+    } finally {
+      setMarkingPaid(null);
+    }
+  };
+
+  // Add Invoice handlers
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => {
+    setOpen(false);
+    setForm({
+      recipientName: '',
+      recipientEmail: '',
+      dueDate: '',
+      lineItems: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
+    });
+  };
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleLineItemChange = (idx: number, field: string, value: any) => {
+    const newLineItems = [...form.lineItems];
+    newLineItems[idx] = { ...newLineItems[idx], [field]: value };
+    // Update total for this line
+    newLineItems[idx].total = Number(newLineItems[idx].quantity) * Number(newLineItems[idx].unitPrice);
+    setForm({ ...form, lineItems: newLineItems });
+  };
+
+  const handleAddLineItem = () => {
+    setForm({ ...form, lineItems: [...form.lineItems, { description: '', quantity: 1, unitPrice: 0, total: 0 }] });
+  };
+
+  const handleRemoveLineItem = (idx: number) => {
+    const newLineItems = form.lineItems.filter((_, i) => i !== idx);
+    setForm({ ...form, lineItems: newLineItems });
+  };
+
+  const totalAmount = form.lineItems.reduce((sum, item) => sum + Number(item.total), 0);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post('/api/invoices', {
+        recipient: { name: form.recipientName, email: form.recipientEmail },
+        dueDate: form.dueDate,
+        lineItems: form.lineItems,
+      }, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setSuccess('Invoice created successfully!');
+      fetchInvoices();
+      handleClose();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to create invoice');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <Box p={3}>
       <Box display="flex" flexDirection={{ xs: 'column', md: 'row' }} gap={3} mb={3}>
         <Box flex={1} mb={{ xs: 2, md: 0 }}>
-          <Card sx={{ background: '#388e3c', color: '#fff' }}>
+          <Card sx={{ background: '#1976d2', color: '#fff' }}>
             <CardContent>
-              <Typography variant="h6">Total Income</Typography>
-              <Typography variant="h4">{formatCurrency(totalIncome, 'KWD')}</Typography>
+              <Typography variant="h6">Total Invoices</Typography>
+              <Typography variant="h4">{invoices.length}</Typography>
             </CardContent>
           </Card>
         </Box>
-        <Box flex={2} display="flex" flexDirection="column" gap={2}>
-          <Paper sx={{ p: 2, mb: 1 }}>
-            <Typography variant="subtitle1" fontWeight={600} mb={1}>Income Trend</Typography>
-            <ResponsiveContainer width="100%" height={120}>
-              <BarChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="total" fill="#1976d2" name="Total" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Paper>
-          <Box display="flex" alignItems="center" justifyContent="flex-end">
-            <TextField
-              size="small"
-              placeholder="Search by description or department"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon />
-                  </InputAdornment>
-                ),
-                endAdornment: search && (
-                  <InputAdornment position="end">
-                    <IconButton onClick={() => setSearch('')} size="small">
-                      <CloseIcon />
-                    </IconButton>
-                  </InputAdornment>
-                )
-              }}
-              sx={{ minWidth: 300 }}
-            />
-            <Button variant="contained" color="primary" onClick={handleOpen} sx={{ minWidth: 180, fontWeight: 600, fontSize: 16, ml: 2 }} disabled={periodLocked}>
-              Add Income
-            </Button>
-          </Box>
+        <Box flex={2} display="flex" alignItems="center" justifyContent="flex-end" gap={2}>
+          <TextField
+            size="small"
+            placeholder="Search by recipient or status"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+              endAdornment: search && (
+                <InputAdornment position="end">
+                  <IconButton onClick={() => setSearch('')} size="small">
+                    <CloseIcon />
+                  </IconButton>
+                </InputAdornment>
+              )
+            }}
+            sx={{ minWidth: 300 }}
+          />
+          <Button variant="contained" color="primary" onClick={handleOpen} sx={{ minWidth: 180, fontWeight: 600, fontSize: 16 }}>
+            Add Invoice
+          </Button>
         </Box>
       </Box>
       <Paper sx={{ mt: 2, p: 2, overflowX: 'auto' }}>
-        <Typography variant="h5" gutterBottom>Income Records</Typography>
+        <Typography variant="h5" gutterBottom>Invoices</Typography>
         {loading ? (
           <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
             <CircularProgress />
@@ -239,31 +236,48 @@ const IncomePage: React.FC = () => {
             <Table stickyHeader>
               <TableHead>
                 <TableRow sx={{ background: '#f5f5f5' }}>
-                  <TableCell>Description</TableCell>
-                  <TableCell
-                    sx={{ cursor: 'pointer', fontWeight: 700 }}
-                    onClick={() => handleSort('amount')}
-                  >
-                    Amount {sortKey === 'amount' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  <TableCell>Invoice #</TableCell>
+                  <TableCell>Recipient</TableCell>
+                  <TableCell>
+                    <span style={{ cursor: 'pointer', fontWeight: 700 }} onClick={() => handleSort('dueDate')}>
+                      Due Date {sortKey === 'dueDate' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                    </span>
                   </TableCell>
-                  <TableCell>Currency</TableCell>
-                  <TableCell>Department</TableCell>
-                  <TableCell
-                    sx={{ cursor: 'pointer', fontWeight: 700 }}
-                    onClick={() => handleSort('date')}
-                  >
-                    Date {sortKey === 'date' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                  <TableCell>
+                    <span style={{ cursor: 'pointer', fontWeight: 700 }} onClick={() => handleSort('totalAmount')}>
+                      Total {sortKey === 'totalAmount' ? (sortOrder === 'asc' ? '↑' : '↓') : ''}
+                    </span>
                   </TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
-                {filteredIncome.map((row, idx) => (
-                  <TableRow key={row._id} sx={{ background: idx % 2 === 0 ? '#fafafa' : '#fff' }}>
-                    <TableCell>{row.description}</TableCell>
-                    <TableCell>{formatCurrency(Number(row.amount), row.currency)}</TableCell>
-                    <TableCell>{row.currency || '-'}</TableCell>
-                    <TableCell>{row.managementDepartment || '-'}</TableCell>
-                    <TableCell>{new Date(row.date).toLocaleDateString()}</TableCell>
+                {(Array.isArray(filteredInvoices) ? filteredInvoices : []).map((inv, idx) => (
+                  <TableRow key={inv._id} sx={{ background: idx % 2 === 0 ? '#fafafa' : '#fff' }}>
+                    <TableCell>{inv._id.slice(-6).toUpperCase()}</TableCell>
+                    <TableCell>
+                      <Typography fontWeight={600}>{inv.recipient?.name}</Typography>
+                      <Typography variant="body2" color="text.secondary">{inv.recipient?.email}</Typography>
+                    </TableCell>
+                    <TableCell>{new Date(inv.dueDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{formatCurrency(Number(inv.totalAmount))}</TableCell>
+                    <TableCell>
+                      <Chip label={inv.status} color={statusColors[inv.status]} size="small" sx={{ textTransform: 'capitalize' }} />
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outlined"
+                        color="success"
+                        size="small"
+                        disabled={inv.status === 'paid' || markingPaid === inv._id}
+                        onClick={() => handleMarkPaid(inv._id)}
+                        sx={{ mr: 1 }}
+                      >
+                        {markingPaid === inv._id ? 'Marking...' : 'Mark as Paid'}
+                      </Button>
+                      {/* View details button could open a modal in the future */}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -271,23 +285,36 @@ const IncomePage: React.FC = () => {
           </TableContainer>
         )}
         {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-        {periodLocked && <Alert severity="warning" sx={{ mb: 2 }}>This period is locked and cannot be edited.</Alert>}
       </Paper>
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Income</DialogTitle>
+      <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
+        <DialogTitle>Add Invoice</DialogTitle>
         <DialogContent>
           <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
-            <TextField label="Description" name="description" value={form.description} onChange={handleChange} required fullWidth />
-            <TextField label="Amount" name="amount" value={form.amount} onChange={handleChange} required fullWidth type="number" />
-            <TextField label="Date" name="date" value={form.date} onChange={handleChange} required fullWidth type="date" InputLabelProps={{ shrink: true }} />
-            <TextField label="Currency" name="currency" value={form.currency} onChange={handleChange} required fullWidth />
-            <TextField label="Management Department" name="managementDepartment" value={form.managementDepartment} onChange={handleChange} fullWidth />
+            <Box display="flex" gap={2}>
+              <TextField label="Recipient Name" name="recipientName" value={form.recipientName} onChange={handleFormChange} required fullWidth />
+              <TextField label="Recipient Email" name="recipientEmail" value={form.recipientEmail} onChange={handleFormChange} required fullWidth type="email" />
+              <TextField label="Due Date" name="dueDate" value={form.dueDate} onChange={handleFormChange} required fullWidth type="date" InputLabelProps={{ shrink: true }} />
+            </Box>
+            <Typography variant="subtitle1" fontWeight={600} mt={2}>Line Items</Typography>
+            {form.lineItems.map((item, idx) => (
+              <Box key={idx} display="flex" gap={2} alignItems="center" mb={1}>
+                <TextField label="Description" value={item.description} onChange={e => handleLineItemChange(idx, 'description', e.target.value)} required fullWidth />
+                <TextField label="Quantity" type="number" value={item.quantity} onChange={e => handleLineItemChange(idx, 'quantity', Number(e.target.value))} required sx={{ maxWidth: 120 }} />
+                <TextField label="Unit Price" type="number" value={item.unitPrice} onChange={e => handleLineItemChange(idx, 'unitPrice', Number(e.target.value))} required sx={{ maxWidth: 140 }} />
+                <TextField label="Total" value={item.total} InputProps={{ readOnly: true }} sx={{ maxWidth: 140 }} />
+                <IconButton color="error" onClick={() => handleRemoveLineItem(idx)} disabled={form.lineItems.length === 1}>
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+            ))}
+            <Button onClick={handleAddLineItem} variant="outlined" color="primary" sx={{ width: 180, mb: 2 }}>Add Line Item</Button>
+            <Typography variant="h6" align="right">Total: {totalAmount.toLocaleString(undefined, { style: 'currency', currency: 'KWD' })}</Typography>
             {error && <Alert severity="error">{error}</Alert>}
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose} disabled={submitting}>Cancel</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary" disabled={submitting}>Add</Button>
+          <Button onClick={handleSubmit} variant="contained" color="primary" disabled={submitting}>Create Invoice</Button>
         </DialogActions>
       </Dialog>
       <Snackbar
@@ -301,4 +328,4 @@ const IncomePage: React.FC = () => {
   );
 };
 
-export default IncomePage; 
+export default InvoicesPage;
