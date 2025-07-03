@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Button, TextField, Paper, Alert } from '@mui/material';
 
-function decodeJWT(token: string): unknown {
+function decodeJWT(token: string): Record<string, any> | null {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
